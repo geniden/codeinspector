@@ -1,0 +1,20 @@
+{
+  "name": "code-inspector",
+  "version": "1.0.0",
+  "description": "Local code analyzer for web projects — generates structured reports for developers and AI agents",
+  "main": "server/server.js",
+  "scripts": {
+    "start": "node server/server.js",
+    "dev": "nodemon server/server.js"
+  },
+  "keywords": ["code-analysis", "static-analysis", "code-inspector"],
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.21.2",
+    "better-sqlite3": "^11.8.1",
+    "cors": "^2.8.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.9"
+  }
+}

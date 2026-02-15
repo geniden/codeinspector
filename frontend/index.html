@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CodeInspector</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔍</text></svg>">
+</head>
+<body>
+  <div id="app">
+    <!-- ─── Sidebar ─── -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="logo">
+          <span class="logo-icon">&#x1f50d;</span>
+          <span class="logo-text">Code<strong>Inspector</strong></span>
+        </div>
+        <span class="version">v1.0.0</span>
+      </div>
+
+      <nav class="sidebar-nav">
+        <a href="#" class="nav-item active" data-page="projects">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
+          Projects
+        </a>
+        <a href="#" class="nav-item" data-page="reports">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          Reports
+        </a>
+        <a href="#" class="nav-item" data-page="settings">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+          Settings
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="status-indicator">
+          <span class="status-dot"></span>
+          Server online
+        </div>
+      </div>
+    </aside>
+
+    <!-- ─── Main Content ─── -->
+    <main class="main-content">
+
+      <!-- ═══ Projects Page ═══ -->
+      <div id="page-projects" class="page active">
+        <div class="page-header">
+          <div>
+            <h1>Projects</h1>
+            <p class="page-subtitle">Manage your code projects for analysis</p>
+          </div>
+          <button class="btn btn-primary" onclick="App.showAddProject()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Add Project
+          </button>
+        </div>
+
+        <div id="projects-grid" class="projects-grid">
+          <!-- Populated by JS -->
+        </div>
+
+        <div id="empty-state" class="empty-state" style="display:none">
+          <div class="empty-icon">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
+          </div>
+          <h3>No projects yet</h3>
+          <p>Add your first project to start analyzing code</p>
+          <button class="btn btn-primary" onclick="App.showAddProject()">Add Project</button>
+        </div>
+      </div>
+
+      <!-- ═══ Reports Page ═══ -->
+      <div id="page-reports" class="page">
+        <div class="page-header">
+          <div>
+            <h1>Reports</h1>
+            <p class="page-subtitle">View generated analysis reports</p>
+          </div>
+        </div>
+        <div id="reports-list" class="reports-list">
+          <div class="empty-state">
+            <h3>No reports yet</h3>
+            <p>Run an analysis on a project to generate reports</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ Settings Page ═══ -->
+      <div id="page-settings" class="page">
+        <div class="page-header">
+          <div>
+            <h1>Settings</h1>
+            <p class="page-subtitle">Configure global application settings</p>
+          </div>
+        </div>
+        <div class="settings-content">
+          <div class="setting-group">
+            <h3>Appearance</h3>
+            <div class="setting-item">
+              <label>Theme</label>
+              <div class="theme-switcher">
+                <button class="theme-btn active" data-theme="dark" onclick="App.setTheme('dark')">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                  Dark
+                </button>
+                <button class="theme-btn" data-theme="light" onclick="App.setTheme('light')">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+                  Light
+                </button>
+              </div>
+              <span class="setting-hint">Switch between dark and light color scheme</span>
+            </div>
+          </div>
+          <div class="setting-group">
+            <h3>General</h3>
+            <div class="setting-item">
+              <label>Default excluded folders</label>
+              <input type="text" id="setting-excluded" value="node_modules, vendor, .git, dist, build, cache" class="input">
+              <span class="setting-hint">Comma-separated list of folders to exclude by default</span>
+            </div>
+          </div>
+          <div class="setting-group">
+            <h3>LLM Integration</h3>
+            <div class="setting-item">
+              <label>Ollama API URL</label>
+              <input type="text" id="setting-ollama-url" value="http://localhost:11434/api/generate" class="input">
+              <span class="setting-hint">URL of local Ollama instance for semantic analysis</span>
+            </div>
+            <div class="setting-item">
+              <label>Default model</label>
+              <input type="text" id="setting-llm-model" value="tinyllama" class="input">
+              <span class="setting-hint">LLM model name for code descriptions</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ Project Detail Page ═══ -->
+      <div id="page-project-detail" class="page">
+        <div class="page-header">
+          <div>
+            <button class="btn btn-ghost" onclick="App.navigate('projects')">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+              Back
+            </button>
+            <h1 id="detail-project-name">Project</h1>
+          </div>
+          <div class="header-actions">
+            <button class="btn btn-outline" onclick="App.editProject()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              Edit
+            </button>
+            <button class="btn btn-primary" onclick="App.analyzeProject()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              Analyze
+            </button>
+          </div>
+        </div>
+
+        <div id="project-detail-content" class="detail-grid">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+      <!-- ═══ Report Viewer Page ═══ -->
+      <div id="page-report" class="page">
+        <div class="page-header">
+          <div>
+            <button class="btn btn-ghost" onclick="App.backFromReport()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+              Back
+            </button>
+            <h1 id="report-title">Analysis Report</h1>
+            <p class="page-subtitle" id="report-subtitle"></p>
+          </div>
+          <div class="header-actions">
+            <button class="btn btn-outline" onclick="App.downloadReport()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Download JSON
+            </button>
+          </div>
+        </div>
+
+        <!-- Report Tabs -->
+        <div class="report-tabs">
+          <button class="report-tab active" onclick="App.showReportTab('overview')">Overview</button>
+          <button class="report-tab" onclick="App.showReportTab('tree')">File Tree</button>
+          <button class="report-tab" onclick="App.showReportTab('structure')">Code Structure</button>
+          <button class="report-tab" onclick="App.showReportTab('quality')">Code Quality</button>
+        </div>
+
+        <div id="report-content">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+    </main>
+
+    <!-- ═══ Modal: Add/Edit Project ═══ -->
+    <div id="modal-overlay" class="modal-overlay" style="display:none" onclick="App.closeModal(event)">
+      <div class="modal" onclick="event.stopPropagation()">
+        <div class="modal-header">
+          <h2 id="modal-title">Add Project</h2>
+          <button class="btn-close" onclick="App.closeModal()">&times;</button>
+        </div>
+        <form id="project-form" onsubmit="App.saveProject(event)">
+          <div class="modal-body">
+            <!-- Basic Info -->
+            <div class="form-section">
+              <h3>Basic Information</h3>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="pf-name">Project Name <span class="required">*</span></label>
+                  <input type="text" id="pf-name" class="input" placeholder="My Awesome Project" required>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="pf-path">Root Path <span class="required">*</span></label>
+                  <input type="text" id="pf-path" class="input" placeholder="C:\projects\my-app  or  /home/user/projects/my-app" required>
+                  <span class="form-hint">Absolute path to the project root directory</span>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="pf-entry">Entry Point</label>
+                  <input type="text" id="pf-entry" class="input" placeholder="src/index.js  or  public/index.php">
+                  <span class="form-hint">Relative path to the main file that starts the application</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Technology Stack -->
+            <div class="form-section">
+              <h3>Technology Stack</h3>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Languages &amp; Platforms</label>
+                  <div class="checkbox-group" id="pf-technologies">
+                    <label class="checkbox-label"><input type="checkbox" value="php"> PHP</label>
+                    <label class="checkbox-label"><input type="checkbox" value="javascript"> JavaScript</label>
+                    <label class="checkbox-label"><input type="checkbox" value="typescript"> TypeScript</label>
+                    <label class="checkbox-label"><input type="checkbox" value="nodejs"> Node.js</label>
+                    <label class="checkbox-label"><input type="checkbox" value="html"> HTML</label>
+                    <label class="checkbox-label"><input type="checkbox" value="css"> CSS</label>
+                  </div>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="pf-framework">Framework</label>
+                  <select id="pf-framework" class="input" onchange="App.onFrameworkChange()">
+                    <option value="none">None / Custom</option>
+                    <optgroup label="PHP Frameworks">
+                      <option value="laravel">Laravel</option>
+                      <option value="symfony">Symfony</option>
+                      <option value="wordpress">WordPress</option>
+                      <option value="yii">Yii</option>
+                      <option value="codeigniter">CodeIgniter</option>
+                    </optgroup>
+                    <optgroup label="JavaScript Frameworks">
+                      <option value="express">Express.js</option>
+                      <option value="react">React</option>
+                      <option value="vue">Vue.js</option>
+                      <option value="nextjs">Next.js</option>
+                      <option value="nuxtjs">Nuxt.js</option>
+                      <option value="angular">Angular</option>
+                      <option value="svelte">Svelte</option>
+                    </optgroup>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- WordPress DB (conditional) -->
+            <div id="wp-db-section" class="form-section" style="display:none">
+              <h3>WordPress Database</h3>
+              <div class="form-row two-col">
+                <div class="form-group">
+                  <label for="pf-wp-host">DB Host</label>
+                  <input type="text" id="pf-wp-host" class="input" placeholder="localhost">
+                </div>
+                <div class="form-group">
+                  <label for="pf-wp-name">DB Name</label>
+                  <input type="text" id="pf-wp-name" class="input" placeholder="wordpress_db">
+                </div>
+              </div>
+              <div class="form-row two-col">
+                <div class="form-group">
+                  <label for="pf-wp-user">DB User</label>
+                  <input type="text" id="pf-wp-user" class="input" placeholder="root">
+                </div>
+                <div class="form-group">
+                  <label for="pf-wp-pass">DB Password</label>
+                  <input type="password" id="pf-wp-pass" class="input" placeholder="password">
+                </div>
+              </div>
+            </div>
+
+            <!-- Analysis Settings -->
+            <div class="form-section">
+              <h3>Analysis Settings</h3>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="pf-excluded">Excluded Folders</label>
+                  <input type="text" id="pf-excluded" class="input" value="node_modules, vendor, .git, dist, build, cache, .next, .nuxt">
+                  <span class="form-hint">Comma-separated folders to skip during analysis</span>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group toggle-group">
+                  <label class="toggle-label">
+                    <input type="checkbox" id="pf-llm" class="toggle-input">
+                    <span class="toggle-switch"></span>
+                    Enable LLM Analysis
+                  </label>
+                  <span class="form-hint">Use a local AI model for semantic code descriptions (requires Ollama)</span>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="pf-notes">Notes</label>
+                  <textarea id="pf-notes" class="input textarea" rows="3" placeholder="Any additional notes about this project..."></textarea>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="btn btn-ghost" onclick="App.closeModal()">Cancel</button>
+            <button type="submit" class="btn btn-primary" id="modal-submit-btn">Add Project</button>
+          </div>
+
+          <input type="hidden" id="pf-id" value="">
+        </form>
+      </div>
+    </div>
+
+    <!-- ═══ Confirm Dialog ═══ -->
+    <div id="confirm-overlay" class="modal-overlay" style="display:none">
+      <div class="modal modal-sm">
+        <div class="modal-header">
+          <h2 id="confirm-title">Confirm</h2>
+        </div>
+        <div class="modal-body">
+          <p id="confirm-message">Are you sure?</p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-ghost" onclick="App.closeConfirm(false)">Cancel</button>
+          <button class="btn btn-danger" id="confirm-btn" onclick="App.closeConfirm(true)">Delete</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ Code Preview Modal ═══ -->
+    <div id="code-preview-overlay" class="modal-overlay" style="display:none" onclick="App.closeCodePreview(event)">
+      <div class="modal modal-code" onclick="event.stopPropagation()">
+        <div class="modal-header">
+          <div style="min-width:0;flex:1">
+            <h2 id="code-preview-title" style="font-size:1rem;word-break:break-all"></h2>
+            <span id="code-preview-subtitle" style="font-size:0.8rem;color:var(--text-muted)"></span>
+          </div>
+          <button class="btn-close" onclick="App.closeCodePreview()">&times;</button>
+        </div>
+        <div class="modal-body code-preview-body" id="code-preview-body">
+          <div class="analysis-running" id="code-preview-loading">
+            <div class="spinner"></div>
+            <p>Loading file...</p>
+          </div>
+          <pre class="code-preview-pre" id="code-preview-content"></pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ Toast Notifications ═══ -->
+    <div id="toast-container" class="toast-container"></div>
+  </div>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
