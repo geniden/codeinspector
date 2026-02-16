@@ -9,6 +9,12 @@ Designed as a **local tool** for developers — runs on your machine, no cloud, 
 
 **Built on the [LAYERS pattern](https://github.com/geniden/layers-pattern)** — each analysis step is an isolated, testable layer with its own contract.
 
+### Screenshots
+
+| Overview — code quality score, stats, languages | Code Quality — issues, main deductions | Export Report — JSON / Markdown |
+|:---:|:---:|:---:|
+| ![Overview](docs/screenshot_1.png) | ![Code Quality](docs/screenshot_2.png) | ![Export](docs/screenshot_3.png) |
+
 ---
 
 ## What It Does
