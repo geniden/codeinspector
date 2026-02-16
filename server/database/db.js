@@ -20,8 +20,18 @@ function getDb() {
   db.pragma('foreign_keys = ON');
 
   initSchema();
+  migrateSchema();
 
   return db;
+}
+
+function migrateSchema() {
+  try {
+    const info = db.pragma('table_info(projects)');
+    if (!info.some(c => c.name === 'project_type')) {
+      db.exec('ALTER TABLE projects ADD COLUMN project_type TEXT DEFAULT "auto"');
+    }
+  } catch (e) { /* ignore */ }
 }
 
 function initSchema() {
@@ -33,7 +43,7 @@ function initSchema() {
       entry_point TEXT DEFAULT '',
       technologies TEXT DEFAULT '[]',
       framework TEXT DEFAULT 'none',
-      excluded_folders TEXT DEFAULT '["node_modules","vendor",".git","dist","build","cache",".next",".nuxt"]',
+      excluded_folders TEXT DEFAULT '["node_modules","vendor",".git","dist","build","cache",".next",".nuxt","reports","data"]',
       wp_db_host TEXT DEFAULT '',
       wp_db_name TEXT DEFAULT '',
       wp_db_user TEXT DEFAULT '',

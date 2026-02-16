@@ -30,6 +30,54 @@ router.get('/', (req, res) => {
   }
 });
 
+// ─── GET /api/projects/fs/browse ─── List directories for folder picker
+router.get('/fs/browse', (req, res) => {
+  try {
+    const dirPath = req.query.path;
+    if (!dirPath || typeof dirPath !== 'string') {
+      let roots = [];
+      if (process.platform === 'win32') {
+        for (const letter of 'CDEFGHIJKLMNOPQRSTUVWXYZ') {
+          const p = `${letter}:\\`;
+          try { if (fs.existsSync(p)) roots.push(p); } catch { /* skip */ }
+        }
+        if (roots.length === 0) roots = ['C:\\'];
+      } else {
+        roots = ['/'];
+      }
+      return res.json({ success: true, data: { path: '', parent: null, entries: roots.map(r => ({ name: r, isDir: true })) } });
+    }
+
+    const resolved = path.resolve(dirPath.trim());
+    if (!fs.existsSync(resolved)) {
+      return res.status(404).json({ success: false, error: 'Path does not exist' });
+    }
+    const stat = fs.statSync(resolved);
+    if (!stat.isDirectory()) {
+      return res.status(400).json({ success: false, error: 'Path is not a directory' });
+    }
+
+    const entries = fs.readdirSync(resolved, { withFileTypes: true })
+      .filter(e => !e.name.startsWith('.'))
+      .map(e => ({ name: e.name, isDir: e.isDirectory() }))
+      .sort((a, b) => (a.isDir === b.isDir) ? a.name.localeCompare(b.name) : (a.isDir ? -1 : 1));
+
+    const parent = path.dirname(resolved);
+    const hasParent = parent !== resolved;
+
+    res.json({
+      success: true,
+      data: {
+        path: resolved,
+        parent: hasParent ? parent : null,
+        entries
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // ─── GET /api/projects/:id ─── Get single project
 router.get('/:id', (req, res) => {
   try {
@@ -64,19 +112,18 @@ router.post('/', (req, res) => {
   try {
     const {
       name, root_path, entry_point = '',
-      technologies = [], framework = 'none',
+      project_type = 'auto', technologies = [],
+      framework = 'none',
       excluded_folders, wp_db_host = '', wp_db_name = '',
       wp_db_user = '', wp_db_pass = '',
       enable_llm = false, llm_model = 'tinyllama', notes = ''
     } = req.body;
 
     // Validation
-    if (!name || !name.trim()) {
-      return res.status(400).json({ success: false, error: 'Project name is required' });
-    }
     if (!root_path || !root_path.trim()) {
       return res.status(400).json({ success: false, error: 'Root path is required' });
     }
+    const finalName = (name && name.trim()) ? name.trim() : path.basename(root_path.trim()) || 'Project';
 
     // Check if path exists
     if (!fs.existsSync(root_path)) {
@@ -88,16 +135,17 @@ router.post('/', (req, res) => {
 
     const db = getDb();
     const stmt = db.prepare(`
-      INSERT INTO projects (name, root_path, entry_point, technologies, framework,
+      INSERT INTO projects (name, root_path, entry_point, project_type, technologies, framework,
         excluded_folders, wp_db_host, wp_db_name, wp_db_user, wp_db_pass,
         enable_llm, llm_model, notes)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     const result = stmt.run(
-      name.trim(),
+      finalName,
       root_path.trim(),
       entry_point.trim(),
+      project_type || 'auto',
       JSON.stringify(technologies),
       framework,
       JSON.stringify(finalExcluded),
@@ -136,22 +184,25 @@ router.put('/:id', (req, res) => {
 
     const {
       name, root_path, entry_point,
-      technologies, framework,
+      project_type, technologies, framework,
       excluded_folders, wp_db_host, wp_db_name,
       wp_db_user, wp_db_pass,
       enable_llm, llm_model, notes
     } = req.body;
 
     // Validate path if changed
-    if (root_path && !fs.existsSync(root_path)) {
+    const finalRootPath = root_path?.trim() || existing.root_path;
+    if (finalRootPath && !fs.existsSync(finalRootPath)) {
       return res.status(400).json({ success: false, error: 'Root path does not exist on disk' });
     }
+    const finalName = (name && name.trim()) ? name.trim() : (path.basename(finalRootPath) || existing.name);
 
     const stmt = db.prepare(`
       UPDATE projects SET
         name = COALESCE(?, name),
         root_path = COALESCE(?, root_path),
         entry_point = COALESCE(?, entry_point),
+        project_type = COALESCE(?, project_type),
         technologies = COALESCE(?, technologies),
         framework = COALESCE(?, framework),
         excluded_folders = COALESCE(?, excluded_folders),
@@ -167,9 +218,10 @@ router.put('/:id', (req, res) => {
     `);
 
     stmt.run(
-      name?.trim() || null,
+      finalName || null,
       root_path?.trim() || null,
       entry_point !== undefined ? entry_point.trim() : null,
+      project_type !== undefined ? project_type : null,
       technologies ? JSON.stringify(technologies) : null,
       framework || null,
       excluded_folders ? JSON.stringify(excluded_folders) : null,

@@ -1,6 +1,7 @@
 # CodeInspector
 
 **Local code analyzer for web projects — generates structured reports for developers and AI agents.**
+https://github.com/geniden/codeinspector
 
 CodeInspector scans your project's source code (PHP, JavaScript, TypeScript, Vue) and produces a detailed, structured report: file tree, code structure, technology stack, code quality issues, and more. Reports are saved as JSON files and displayed in a modern web dashboard.
 
@@ -49,6 +50,19 @@ Designed as a **local tool** for developers — runs on your machine, no cloud, 
 │  │  • Cyclomatic complexity per file                   │  │
 │  │  • PHP dynamic class loading detection              │  │
 │  └─────────────────────────────────────────────────────┘  │
+│         ↓ snapshot                                        │
+│  ┌─────────────────────────────────────────────────────┐  │
+│  │  Layer 5: Key Locations                             │  │
+│  │  • Entry points, DB config, .env, logs               │  │
+│  │  • Dotted config files (per project type)            │  │
+│  └─────────────────────────────────────────────────────┘  │
+│         ↓ snapshot                                        │
+│  ┌─────────────────────────────────────────────────────┐  │
+│  │  Layer 6: Code Score                                │  │
+│  │  • 0–10 quality score with feedback message          │  │
+│  │  • Penalties: commented code, large files, unsafe SQL│  │
+│  │  • Bonuses: PHP types, ES6+ usage                    │  │
+│  └─────────────────────────────────────────────────────┘  │
 │         ↓                                                 │
 │  JSON Report → saved to disk + displayed in dashboard     │
 │                                                           │
@@ -60,11 +74,15 @@ Designed as a **local tool** for developers — runs on your machine, no cloud, 
 - **File System Analysis** — smart file tree that shows code files individually and collapses assets (images, fonts, media) into a summary line
 - **Technology Stack Detection** — identifies languages, frameworks, PHP/ECMAScript/TypeScript versions, package managers, config files
 - **Code Structure Extraction** — classes, functions, methods with visibility, parameters, return types, inheritance
-- **Code Quality Checks** — unused symbols, unused imports, unused dependencies, large functions, commented-out code blocks, cyclomatic complexity
+- **Code Quality Checks** — unused symbols, unused imports, unused dependencies, commented-out code blocks, cyclomatic complexity (PHP/JS/TS only for size penalties)
+- **Code Quality Score (0–10)** — overall score with penalties (commented code, large code files >100KB, unsafe SQL) and bonuses (PHP types, ES6+ usage). **Main issues** block lists what caused deductions.
+- **Key Locations** — entry points, DB config, .env files, logs, dotted config — detected per project type (PHP, Node.js, SPA, Telegram bot)
 - **PHP Dynamic Loading Awareness** — detects `new $variable` patterns and marks potentially dynamic classes as informational instead of false positives
 - **Dependency Audit** — lists all npm/composer dependencies and checks if they are actually imported in the code
+- **Report Export** — export reports as **JSON** or **Markdown** with selectable sections (Overview, Project Structure, Code Quality). Markdown is optimized for AI agents.
 - **Report History** — all analysis reports are saved as JSON files, viewable without re-running analysis
 - **Code Preview** — click any file path in an issue to open a quick code viewer with syntax highlighting and line scrolling
+- **Localization (EN/RU)** — full interface in English or Russian, selectable in Settings
 - **Light & Dark Themes** — switch between dark and light color schemes in Settings
 - **Auto Port Selection** — if port 3031 is busy, automatically finds the next available port
 
@@ -97,13 +115,13 @@ Designed as a **local tool** for developers — runs on your machine, no cloud, 
 
 CodeInspector includes a modern, responsive web dashboard with:
 
-- **Projects page** — add, configure, and manage multiple projects
-- **Report viewer** with 4 tabs:
-  - **Overview** — stats, language badges with colors, frameworks, dependencies
-  - **File Tree** — smart tree view + folder statistics with total script size
-  - **Code Structure** — collapsible file-by-file view of classes, functions, methods
-  - **Code Quality** — sorted issues with severity, clickable file paths, code preview
-- **Settings** — theme switcher (dark/light), default excluded folders, LLM configuration
+- **Projects page** — add, configure, and manage multiple projects. Project types: Auto, PHP, Telegram bot PHP, Node.js, SPA, PWA, Telegram Mini App, Static
+- **Report viewer** with 3 tabs:
+  - **Overview** — code quality score (0–10), stats, Key Locations, language badges, frameworks, dependencies
+  - **Project Structure** — smart tree view with folder stats, collapsible file-by-file view of classes/functions/methods, code preview links
+  - **Code Quality** — Main issues (score deductions), sorted issues with severity, clickable file paths, code preview, complexity analysis table (files with complexity > 10)
+- **Export** — download report as JSON or Markdown; choose sections to include
+- **Settings** — theme (dark/light), **language (EN/RU)**, default excluded folders, LLM configuration
 - **SQLite storage** — projects and analysis metadata persisted locally
 
 ## Quick Start (Windows 11)
@@ -173,13 +191,20 @@ codeinspector/
 │   └── 04-code-quality/
 │       ├── code-quality-layer.js       #   Unused code, dead code, complexity
 │       └── LAYER.md                    #   Layer contract
+│  ├── 05-key-locations/
+│  │   └── key-locations-layer.js       #   Entry points, DB config, .env, logs
+│  └── 06-code-score/
+│       └── code-score-layer.js         #   Quality score 0–10, deductions
 │
 ├── frontend/                            # Single-page web dashboard
 │   ├── index.html                      #   SPA layout
 │   ├── css/style.css                   #   Dark + light themes
-│   └── js/app.js                       #   Frontend logic
+│   ├── js/app.js                       #   Frontend logic
+│   └── lang/
+│       ├── en.json                     #   English strings
+│       └── ru.json                     #   Russian strings
 │
-├── reports/                             # Generated JSON reports (per project)
+├── reports/                             # Generated JSON reports (gitignored)
 ├── data/                                # SQLite database (auto-created)
 ├── start.bat                            # Windows launcher
 ├── package.json
@@ -223,8 +248,8 @@ This makes each layer independently testable and easy for AI agents to understan
 - [ ] React/Vue component analysis — props, state, lifecycle
 - [ ] AST-based parsing (replacing regex) for higher accuracy
 - [ ] LLM integration (Ollama) — semantic code review with local models
-- [ ] Multi-language interface (EN/RU)
-- [ ] Export reports to PDF/HTML
+- [x] Multi-language interface (EN/RU)
+- [x] Export reports (JSON, Markdown)
 
 ---
 

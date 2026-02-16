@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Prism Test</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/plugins/line-numbers/prism-line-numbers.min.css">
+  <style>
+    body { font-family: sans-serif; padding: 20px; background: #1e1e1e; color: #ccc; }
+    h1 { font-size: 1.2rem; }
+    section { margin: 24px 0; }
+    pre { margin: 8px 0; }
+    .info { font-size: 0.85rem; color: #888; margin-bottom: 8px; }
+    button { padding: 8px 16px; cursor: pointer; margin-right: 8px; }
+    #log { background: #111; padding: 12px; font-family: monospace; font-size: 12px; max-height: 200px; overflow-y: auto; white-space: pre-wrap; word-break: break-all; }
+    .ok { color: #7ec699; }
+    .err { color: #e2777a; }
+  </style>
+</head>
+<body>
+  <h1>Prism.js — тест</h1>
+
+  <section>
+    <div class="info">1. Статический блок (уже в HTML при загрузке):</div>
+    <pre class="line-numbers"><code class="language-javascript">function hello() {
+  const x = 42;
+  return "world";
+}</code></pre>
+  </section>
+
+  <section>
+    <div class="info">2. Динамический блок (создаётся по кнопке, как в app):</div>
+    <button onclick="testDynamic()">Создать блок и подсветить</button>
+    <div id="dynamic-container"></div>
+  </section>
+
+  <section>
+    <div class="info">3. Проверка глобального Prism:</div>
+    <button onclick="checkPrism()">Проверить Prism в консоли</button>
+  </section>
+
+  <section>
+    <div class="info">4. Лог (скопируй и отправь):</div>
+    <div id="log"></div>
+  </section>
+
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/plugins/line-numbers/prism-line-numbers.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-javascript.min.js"></script>
+
+  <script>
+    const logEl = document.getElementById('log');
+    function log(msg, isErr) {
+      const line = document.createElement('div');
+      line.className = isErr ? 'err' : 'ok';
+      line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+      logEl.appendChild(line);
+      logEl.scrollTop = logEl.scrollHeight;
+      console.log(msg);
+      if (isErr) console.error(msg);
+    }
+
+    function checkPrism() {
+      log('--- checkPrism ---');
+      log('typeof Prism: ' + typeof Prism);
+      if (typeof Prism !== 'undefined') {
+        log('Prism.languages keys: ' + Object.keys(Prism.languages).join(', '));
+        log('Prism.languages.javascript: ' + (Prism.languages.javascript ? 'exists' : 'MISSING'));
+        log('Prism.highlightElement: ' + (typeof Prism.highlightElement));
+      } else {
+        log('Prism НЕ ОПРЕДЕЛЁН!', true);
+      }
+    }
+
+    function testDynamic() {
+      const raw = 'function test() { return 123; }';
+      const pre = document.createElement('pre');
+      pre.className = 'line-numbers language-javascript';
+      const code = document.createElement('code');
+      code.className = 'language-javascript';
+      code.textContent = raw;
+      pre.appendChild(code);
+
+      const container = document.getElementById('dynamic-container');
+      container.innerHTML = '';
+      container.appendChild(pre);
+
+      log('--- testDynamic ---');
+      log('typeof Prism: ' + typeof Prism);
+      log('Prism.languages.javascript: ' + (Prism.languages.javascript ? 'exists' : 'MISSING'));
+
+      if (typeof Prism !== 'undefined' && Prism.languages.javascript) {
+        try {
+          Prism.highlightElement(code);
+          log('highlightElement() выполнен без ошибок');
+          const spans = code.querySelectorAll('.token');
+          log('Количество .token элементов: ' + spans.length);
+          if (spans.length === 0) log('ОШИБКА: токены не созданы!', true);
+        } catch (e) {
+          log('highlightElement ОШИБКА: ' + e.message, true);
+        }
+      } else {
+        log('Prism недоступен для подсветки', true);
+      }
+    }
+
+    // При загрузке — подсветить статический блок
+    document.addEventListener('DOMContentLoaded', function() {
+      log('DOMContentLoaded');
+      checkPrism();
+      const staticCode = document.querySelector('pre code.language-javascript');
+      if (staticCode && typeof Prism !== 'undefined') {
+        try {
+          Prism.highlightElement(staticCode);
+          log('Статический блок подсвечен');
+        } catch (e) {
+          log('Статический блок ошибка: ' + e.message, true);
+        }
+      }
+    });
+  </script>
+</body>
+</html>

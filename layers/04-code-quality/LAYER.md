@@ -2,7 +2,7 @@
 
 ## Purpose
 Detects code quality issues: unused functions/methods/classes, unused imports,
-unused npm/composer dependencies, overly large functions, and calculates
+unused npm/composer dependencies, commented-out code blocks, and calculates
 cyclomatic complexity per file.
 
 ## State Owned
@@ -19,7 +19,7 @@ cyclomatic complexity per file.
 3. Compare declared vs referenced — anything declared but never referenced is "unused"
 4. Check imports: if an imported specifier is only used in the import line itself, it's unused
 5. Check dependencies: if a package from package.json/composer.json is never imported in code
-6. Detect large functions/methods (>80 lines)
+6. Detect commented-out code blocks (8+ consecutive lines)
 7. Calculate cyclomatic complexity per file
 
 ## Limitations
@@ -38,7 +38,6 @@ cyclomatic complexity per file.
       "unusedClasses": 1,
       "unusedImports": 5,
       "unusedDependencies": 2,
-      "largeFunctions": 2,
       "bySeverity": { "critical": 0, "warning": 5, "info": 10 }
     },
     "issues": [

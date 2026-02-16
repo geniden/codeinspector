@@ -22,6 +22,8 @@ class CodeStructureLayer extends BaseLayer {
     let totalExports = 0;
 
     for (const fileInfo of filesList) {
+      if (fileInfo.obfuscated) continue;
+
       const content = fileContents[fileInfo.path];
       if (!content) continue;
 
@@ -146,19 +148,25 @@ class CodeStructureLayer extends BaseLayer {
       });
     }
 
+    if (result.classes.length === 0 && result.functions.length === 0) {
+      const previewLines = content.split('\n').slice(0, 25);
+      result.previewLines = previewLines;
+    }
+
     return result;
   }
 
   extractPhpMethods(classBody, classStartLine) {
     const methods = [];
-    const methodRegex = /(public|protected|private|static)\s+(?:static\s+)?function\s+(\w+)\s*\(([^)]*)\)(?:\s*:\s*([\w|?\\]+))?\s*\{/g;
+    // visibility optional — ловим и public/private/protected, и методы без модификатора (PHP4, или без явного)
+    const methodRegex = /(?:(?:abstract|final)\s+)?(public|protected|private|static)?\s*(?:static\s+)?function\s+(\w+)\s*\(([^)]*)\)(?:\s*:\s*([\w|?\\]+))?\s*\{/g;
     let match;
 
     while ((match = methodRegex.exec(classBody)) !== null) {
       const line = classStartLine + classBody.substring(0, match.index).split('\n').length - 1;
       methods.push({
         name: match[2],
-        visibility: match[1],
+        visibility: match[1] || null, // null = без модификатора
         params: this.parseParams(match[3]),
         returnType: match[4] || null,
         isStatic: match[0].includes('static'),

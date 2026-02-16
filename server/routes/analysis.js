@@ -1,3 +1,4 @@
+// ..\..\nodejs\code-inspector\server\routes\analysis.js
 const express = require('express');
 const router = express.Router();
 const path = require('path');
@@ -10,9 +11,23 @@ const FileSystemLayer = require('../../layers/01-file-system/file-system-layer')
 const TechStackLayer = require('../../layers/02-tech-stack/tech-stack-layer');
 const CodeStructureLayer = require('../../layers/03-code-structure/code-structure-layer');
 const CodeQualityLayer = require('../../layers/04-code-quality/code-quality-layer');
+const KeyLocationsLayer = require('../../layers/05-key-locations/key-locations-layer');
+const CodeScoreLayer = require('../../layers/06-code-score/code-score-layer');
 
 // Track running analyses
 const runningAnalyses = new Map();
+
+// Общее количество слоёв — вынесено НАРУЖУ, чтобы было доступно везде
+const TOTAL_LAYERS = 6;
+
+const LAYERS_INFO = [
+  { name: 'File System' },
+  { name: 'Tech Stack' },
+  { name: 'Code Structure' },
+  { name: 'Code Quality' },
+  { name: 'Key Locations' },
+  { name: 'Code Score' }
+];
 
 // ─── POST /api/analysis/start ─── Start analysis for a project
 router.post('/start', (req, res) => {
@@ -30,6 +45,7 @@ router.post('/start', (req, res) => {
     project.technologies = JSON.parse(project.technologies || '[]');
     project.excluded_folders = JSON.parse(project.excluded_folders || '[]');
     project.enable_llm = Boolean(project.enable_llm);
+    project.project_type = project.project_type || 'auto';
 
     // Check if analysis is already running for this project
     if (runningAnalyses.has(projectId)) {
@@ -44,9 +60,19 @@ router.post('/start', (req, res) => {
 
     const analysisId = result.lastInsertRowid;
 
-    // Run analysis in background
-    runningAnalyses.set(projectId, { analysisId, progress: { step: 0, total: 4, layer: 'starting' } });
+    // ✅ Устанавливаем начальное состояние прогресса
+    runningAnalyses.set(projectId, {
+      analysisId,
+      progress: {
+        step: 0,
+        total: TOTAL_LAYERS,
+        layer: 'starting',
+        detail: null
+      },
+      currentLayerIndex: 0
+    });
 
+    // Run analysis in background
     runAnalysis(project, analysisId)
       .then(() => {
         runningAnalyses.delete(projectId);
@@ -102,7 +128,6 @@ router.get('/:id/status', (req, res) => {
 });
 
 // ─── Analysis Runner ───
-
 async function runAnalysis(project, analysisId) {
   const db = getDb();
   const startTime = Date.now();
@@ -114,14 +139,39 @@ async function runAnalysis(project, analysisId) {
     engine.addLayer(new TechStackLayer());
     engine.addLayer(new CodeStructureLayer());
     engine.addLayer(new CodeQualityLayer());
+    engine.addLayer(new KeyLocationsLayer());
+    engine.addLayer(new CodeScoreLayer());
 
     // Run analysis with progress tracking
     const report = await engine.analyze(project, (progress) => {
       const running = runningAnalyses.get(project.id);
-      if (running) {
-        running.progress = progress;
+      if (!running) return;
+
+      // Если это прогресс внутри слоя (например, code-quality)
+        if (progress.layer && !['file-system', 'tech-stack', 'code-structure', 'code-quality', 'key-locations', 'code-score'].includes(progress.layer)) {
+        running.progress = {
+          step: running.currentLayerIndex,
+          total: TOTAL_LAYERS,
+          layer: LAYERS_INFO[running.currentLayerIndex]?.name || 'Processing',
+          detail: progress.layer,
+          current: progress.current,
+          total: progress.total,
+          subStep: true
+        };
+      } else {
+        // Transition between layers
+        running.progress = {
+          step: progress.current,
+          total: progress.total,
+          current: progress.current,
+          layer: progress.layer,
+          detail: null,
+          subStep: false
+        };
+        running.currentLayerIndex = (progress.current || 1) - 1;
       }
-      console.log(`  [Layer ${progress.step}/${progress.total}] ${progress.layer}`);
+
+      console.log(`[Progress] ${JSON.stringify(running.progress)}`);
     });
 
     // Save report as JSON file
@@ -137,13 +187,13 @@ async function runAnalysis(project, analysisId) {
 
     // Build summary for quick access
     const summary = {
-      totalFiles: report.fileSystem ? report.fileSystem.totalFiles : 0,
-      totalLines: report.fileSystem ? report.fileSystem.totalLines : 0,
-      totalClasses: report.codeStructure ? report.codeStructure.totalClasses : 0,
-      totalFunctions: report.codeStructure ? report.codeStructure.totalFunctions : 0,
-      totalIssues: report.codeQuality ? report.codeQuality.summary.totalIssues : 0,
-      languages: report.techStack ? report.techStack.languages.map(l => l.name) : [],
-      frameworks: report.techStack ? report.techStack.frameworks.map(f => f.name) : []
+      totalFiles: report.fileSystem?.totalFiles || 0,
+      totalLines: report.fileSystem?.totalLines || 0,
+      totalClasses: report.codeStructure?.totalClasses || 0,
+      totalFunctions: report.codeStructure?.totalFunctions || 0,
+      totalIssues: report.codeQuality?.summary?.totalIssues || 0,
+      languages: report.techStack?.languages?.map(l => l.name) || [],
+      frameworks: report.techStack?.frameworks?.map(f => f.name) || []
     };
 
     const durationMs = Date.now() - startTime;

@@ -1,27 +1,21 @@
+// ..\..\nodejs\code-inspector\layers\04-code-quality\code-quality-layer.js
+
 const BaseLayer = require('../core/base-layer');
 
 /**
  * CodeQualityLayer — detects unused code, unused imports/dependencies,
- * large functions, and calculates basic complexity metrics.
+ * commented-out code blocks, and calculates basic complexity metrics.
  *
- * Aware of PHP dynamic class loading patterns (new $variable).
+ * Note: large-function check was removed — with AI-written code, function sizes
+ * have grown; strict line limits were too noisy.
+ *
+ * Now async-friendly: uses yieldControl() to avoid blocking the event loop.
+ * Supports progress reporting via context.onProgress.
  */
 class CodeQualityLayer extends BaseLayer {
   constructor() {
     super('code-quality');
   }
-
-  // Language-aware thresholds for "large function"
-  static THRESHOLDS = {
-    php: 500,
-    javascript: 100,
-    typescript: 100,
-    vue: 100,
-    default: 150
-  };
-
-  // Languages where large functions are informational, not warnings
-  static LENIENT_LANGUAGES = new Set(['php', 'javascript', 'typescript', 'vue']);
 
   async process(snapshot, context) {
     const fileContents = snapshot._fileContents || {};
@@ -29,44 +23,56 @@ class CodeQualityLayer extends BaseLayer {
     const techStack = snapshot.techStack || {};
     const filesAnalysis = codeStructure.files || [];
 
-    // Collect all declared symbols and all references across the project
+    const obfuscatedPaths = new Set(
+      (snapshot.fileSystem?.files || [])
+        .filter(f => f.obfuscated)
+        .map(f => f.path)
+    );
+
+    this.context = context;
+    this.obfuscatedPaths = obfuscatedPaths;
+
+    // ─── Collect declared symbols ──────────────────────
     const declared = this.collectDeclaredSymbols(filesAnalysis);
-    const referenced = this.collectReferences(fileContents);
+    await this.yieldControl();
 
-    // Detect dynamic class loading patterns in PHP
+    // ─── Collect references (async-safe) ───────────────
+    const referenced = await this.collectReferencesChunked(fileContents);
+    await this.yieldControl();
+
+    // ─── Detect dynamic loading (PHP) ──────────────────
     const hasDynamicLoading = this.detectDynamicClassLoading(fileContents);
+    await this.yieldControl();
 
-    // ─── Find unused functions/methods ───
+    // ─── Find unused symbols ───────────────────────────
     const unusedFunctions = this.findUnusedSymbols(declared.functions, referenced);
     const unusedMethods = this.findUnusedSymbols(declared.methods, referenced);
     const unusedClasses = this.findUnusedClasses(declared.classes, referenced, hasDynamicLoading);
+    await this.yieldControl();
 
-    // ─── Find unused imports ───
-    const unusedImports = this.findUnusedImports(filesAnalysis, fileContents);
+    // ─── Find unused imports ───────────────────────────
+    const unusedImports = await this.findUnusedImportsChunked(filesAnalysis, fileContents);
+    await this.yieldControl();
 
-    // ─── Find unused npm/composer dependencies ───
-    const unusedDependencies = this.findUnusedDependencies(techStack, fileContents);
+    // ─── Find unused dependencies ──────────────────────
+    const unusedDependencies = await this.findUnusedDependenciesChunked(techStack, fileContents);
+    await this.yieldControl();
 
-    // ─── Detect large functions (language-aware thresholds) ───
-    const largeFunctions = this.findLargeFunctions(fileContents, filesAnalysis);
+    // ─── Commented-out code blocks ─────────────────────
+    const commentedCode = await this.findCommentedCodeChunked(fileContents);
+    await this.yieldControl();
 
-    // ─── Detect large commented-out code blocks ───
-    const commentedCode = this.findCommentedCode(fileContents);
+    // ─── Complexity analysis ───────────────────────────
+    const complexity = await this.analyzeComplexityChunked(fileContents);
+    await this.yieldControl();
 
-    // ─── Calculate file complexity ───
-    const complexity = this.analyzeComplexity(fileContents);
-
-    // ─── Build issues list ───
+    // ─── Build issues list ─────────────────────────────
     const issues = [];
     unusedFunctions.forEach(f => issues.push({ ...f, type: 'unused_function', severity: 'warning', tag: 'never called' }));
     unusedMethods.forEach(f => issues.push({ ...f, type: 'unused_method', severity: 'warning', tag: 'never called' }));
     unusedClasses.forEach(f => issues.push({ ...f, type: 'unused_class', tag: f.dynamic ? 'possibly dynamic' : 'never instantiated' }));
     unusedImports.forEach(f => issues.push({ ...f, type: 'unused_import', severity: 'info', tag: 'never used' }));
     unusedDependencies.forEach(f => issues.push({ ...f, type: 'unused_dependency', severity: 'info', tag: 'not imported' }));
-    largeFunctions.forEach(f => {
-      const sev = CodeQualityLayer.LENIENT_LANGUAGES.has(f.language) ? 'info' : 'warning';
-      issues.push({ ...f, type: 'large_function', severity: sev, tag: `${f.lines} lines` });
-    });
     commentedCode.forEach(f => issues.push({ ...f, type: 'commented_code', severity: 'info', tag: `${f.lines} lines` }));
 
     // Sort: critical → warning → info
@@ -82,7 +88,6 @@ class CodeQualityLayer extends BaseLayer {
           unusedClasses: unusedClasses.length,
           unusedImports: unusedImports.length,
           unusedDependencies: unusedDependencies.length,
-          largeFunctions: largeFunctions.length,
           commentedCode: commentedCode.length,
           hasDynamicLoading,
           bySeverity: {
@@ -98,34 +103,30 @@ class CodeQualityLayer extends BaseLayer {
         unusedClasses,
         unusedImports,
         unusedDependencies,
-        largeFunctions,
         commentedCode
       }
     };
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // Yield control to prevent blocking the event loop
+  // ─────────────────────────────────────────────────────────────
+  async yieldControl() {
+    if (this.context?.onProgress) {
+      await new Promise(resolve => setImmediate(resolve));
+    }
   }
 
   // ═══════════════════════════════════════════════════════
   // Detect Dynamic Class Loading (PHP)
   // ═══════════════════════════════════════════════════════
 
-  /**
-   * Detect patterns like: new $variable, new $class(...), $class = ucfirst(...)
-   * If present, unused class reports become "info" instead of "warning".
-   */
   detectDynamicClassLoading(fileContents) {
     for (const [filePath, content] of Object.entries(fileContents)) {
       if (!content || !filePath.endsWith('.php')) continue;
-
-      // Pattern: new $variable(...)
       if (/new\s+\$\w+\s*\(/m.test(content)) return true;
-
-      // Pattern: $class = ucfirst(...); or $class = '...' class name from variable
       if (/\$\w+\s*=\s*ucfirst\s*\(/m.test(content)) return true;
-
-      // Pattern: call_user_func with array (dynamic method calls)
       if (/call_user_func\s*\(\s*\[/m.test(content)) return true;
-
-      // Pattern: $obj = new $$variable
       if (/new\s+\$\$/m.test(content)) return true;
     }
     return false;
@@ -141,7 +142,6 @@ class CodeQualityLayer extends BaseLayer {
     const classes = [];
 
     for (const file of filesAnalysis) {
-      // Standalone functions
       for (const func of (file.functions || [])) {
         functions.push({
           name: func.name,
@@ -151,7 +151,6 @@ class CodeQualityLayer extends BaseLayer {
         });
       }
 
-      // Classes and their methods
       for (const cls of (file.classes || [])) {
         classes.push({
           name: cls.name,
@@ -161,10 +160,7 @@ class CodeQualityLayer extends BaseLayer {
         });
 
         for (const method of (cls.methods || [])) {
-          // Skip constructor and magic methods
-          if (method.name === 'constructor' || method.name === '__construct' ||
-              method.name.startsWith('__')) continue;
-
+          if (method.name === 'constructor' || method.name === '__construct' || method.name.startsWith('__')) continue;
           methods.push({
             name: method.name,
             className: cls.name,
@@ -181,51 +177,65 @@ class CodeQualityLayer extends BaseLayer {
   }
 
   // ═══════════════════════════════════════════════════════
-  // Collect All References (function calls, class usage)
+  // Collect All References (async-safe)
   // ═══════════════════════════════════════════════════════
 
-  collectReferences(fileContents) {
+  async collectReferencesChunked(fileContents) {
     const references = new Set();
+    const entries = Object.entries(fileContents);
+    const total = entries.length;
+    const MAX_CONTENT_LEN = 300000; // 300KB — limit per file to avoid blocking on huge files
 
-    for (const [filePath, content] of Object.entries(fileContents)) {
+    for (let i = 0; i < entries.length; i++) {
+      const [filePath, content] = entries[i];
       if (!content) continue;
+      if (this.obfuscatedPaths?.has(filePath)) continue;
 
+      const text = content.length > MAX_CONTENT_LEN ? content.slice(0, MAX_CONTENT_LEN) : content;
       let match;
 
-      // Function calls: functionName(
+      // Match function calls, but exclude declarations (function name(, public function name(, etc.)
       const funcCallRegex = /\b(\w+)\s*\(/g;
-      while ((match = funcCallRegex.exec(content)) !== null) {
+      while ((match = funcCallRegex.exec(text)) !== null) {
+        const before = text.slice(Math.max(0, match.index - 60), match.index);
+        if (/\b(?:async\s+)?(?:function\s*\*?\s*|(?:public|protected|private|static)\s+(?:static\s+)?function\s+)$/m.test(before)) {
+          continue; // Skip: this is a declaration, not a call
+        }
         references.add(match[1]);
       }
 
-      // Method calls: ->methodName( or .methodName( or ::methodName(
       const methodCallRegex = /(?:->|\.|\:\:)\s*(\w+)\s*\(/g;
-      while ((match = methodCallRegex.exec(content)) !== null) {
+      while ((match = methodCallRegex.exec(text)) !== null) {
         references.add(match[1]);
       }
 
-      // Class instantiation: new ClassName
       const newClassRegex = /new\s+(\w+)/g;
-      while ((match = newClassRegex.exec(content)) !== null) {
+      while ((match = newClassRegex.exec(text)) !== null) {
         references.add(match[1]);
       }
 
-      // Class references in type hints, extends, implements
       const classRefRegex = /(?:extends|implements|instanceof|\:\s*)\s*(\w+)/g;
-      while ((match = classRefRegex.exec(content)) !== null) {
+      while ((match = classRefRegex.exec(text)) !== null) {
         references.add(match[1]);
       }
 
-      // PHP static calls: ClassName::
       const staticCallRegex = /(\w+)\:\:/g;
-      while ((match = staticCallRegex.exec(content)) !== null) {
+      while ((match = staticCallRegex.exec(text)) !== null) {
         references.add(match[1]);
       }
 
-      // Import specifiers
       const importRefRegex = /(?:import|require|use)\s+.*?(\w+)/g;
-      while ((match = importRefRegex.exec(content)) !== null) {
+      while ((match = importRefRegex.exec(text)) !== null) {
         references.add(match[1]);
+      }
+
+      await this.yieldControl();
+      if (i % 25 === 0 && this.context?.onProgress) {
+        this.context.onProgress({
+          layer: 'Collecting references',
+          current: i + 1,
+          total
+        });
       }
     }
 
@@ -238,14 +248,9 @@ class CodeQualityLayer extends BaseLayer {
 
   findUnusedSymbols(declared, referenced) {
     const unused = [];
-
     for (const symbol of declared) {
       const name = symbol.name;
-
-      // Skip common entry points and lifecycle methods
       if (this.isEntryPoint(name)) continue;
-
-      // Check if the symbol name appears in references
       if (!referenced.has(name)) {
         unused.push({
           name,
@@ -257,26 +262,17 @@ class CodeQualityLayer extends BaseLayer {
         });
       }
     }
-
     return unused;
   }
 
-  /**
-   * Find unused classes, with special handling for dynamic loading.
-   * If dynamic class loading is detected (new $var), unused PHP classes
-   * get severity "info" instead of "warning" and a note about dynamic loading.
-   */
   findUnusedClasses(declaredClasses, referenced, hasDynamicLoading) {
     const unused = [];
-
     for (const cls of declaredClasses) {
       const name = cls.name;
       if (this.isEntryPoint(name)) continue;
-
       if (!referenced.has(name)) {
         const isPhp = cls.language === 'php';
         const isDynamic = isPhp && hasDynamicLoading;
-
         unused.push({
           name,
           file: cls.file,
@@ -285,12 +281,11 @@ class CodeQualityLayer extends BaseLayer {
           dynamic: isDynamic,
           severity: isDynamic ? 'info' : 'warning',
           description: isDynamic
-            ? `"${name}" has no direct reference — likely loaded dynamically (new $variable pattern detected)`
-            : `"${name}" is declared but never referenced in the project`
+            ? `"${name}" has no direct reference — likely loaded dynamically`
+            : `"${name}" is declared but never referenced`
         });
       }
     }
-
     return unused;
   }
 
@@ -298,14 +293,11 @@ class CodeQualityLayer extends BaseLayer {
     const entryPoints = new Set([
       'main', 'init', 'setup', 'boot', 'register',
       'run', 'start', 'execute', 'handle',
-      // PHP magic methods
       '__construct', '__destruct', '__get', '__set', '__call',
       '__callStatic', '__toString', '__invoke', '__clone',
-      // JS lifecycle
       'render', 'componentDidMount', 'componentDidUpdate',
       'componentWillUnmount', 'useEffect', 'useState',
       'mounted', 'created', 'updated', 'destroyed', 'setup',
-      // Common patterns
       'toJSON', 'toString', 'valueOf', 'Symbol',
       'get', 'set', 'post', 'put', 'delete', 'patch',
       'index', 'store', 'show', 'update', 'destroy', 'create'
@@ -314,30 +306,28 @@ class CodeQualityLayer extends BaseLayer {
   }
 
   // ═══════════════════════════════════════════════════════
-  // Find Unused Imports
+  // Find Unused Imports (chunked)
   // ═══════════════════════════════════════════════════════
 
-  findUnusedImports(filesAnalysis, fileContents) {
+  async findUnusedImportsChunked(filesAnalysis, fileContents) {
     const unusedImports = [];
+    const total = filesAnalysis.length;
+    const MAX_LEN = 300000;
 
-    for (const file of filesAnalysis) {
-      const content = fileContents[file.path];
-      if (!content) continue;
+    for (let i = 0; i < filesAnalysis.length; i++) {
+      await this.yieldControl();
+      const file = filesAnalysis[i];
+      const raw = fileContents[file.path];
+      if (!raw) continue;
+      const content = raw.length > MAX_LEN ? raw.slice(0, MAX_LEN) : raw;
 
       for (const imp of (file.imports || [])) {
-        const specifiers = imp.specifiers || [];
-        if (specifiers.length === 0 && imp.alias) {
-          specifiers.push(imp.alias);
-        }
-
+        const specifiers = [...(imp.specifiers || []), ...(imp.alias ? [imp.alias] : [])];
         for (const specifier of specifiers) {
           if (!specifier || specifier.startsWith('$')) continue;
-
-          // Count occurrences in the file (subtract the import line itself)
-          const allMatches = content.match(new RegExp(`\\b${this.escapeRegex(specifier)}\\b`, 'g'));
-          const importMatches = 1; // The import itself
-
-          if (!allMatches || allMatches.length <= importMatches) {
+          const regex = new RegExp(`\\b${this.escapeRegex(specifier)}\\b`, 'g');
+          const allMatches = content.match(regex);
+          if (!allMatches || allMatches.length <= 1) {
             unusedImports.push({
               name: specifier,
               source: imp.source,
@@ -348,43 +338,60 @@ class CodeQualityLayer extends BaseLayer {
           }
         }
       }
+
+      if (i % 25 === 0 && this.context?.onProgress) {
+        this.context.onProgress({ layer: 'Checking unused imports', current: i + 1, total });
+      }
     }
 
     return unusedImports;
   }
 
   // ═══════════════════════════════════════════════════════
-  // Find Unused Dependencies (npm / composer)
+  // Find Unused Dependencies (chunked)
   // ═══════════════════════════════════════════════════════
 
-  findUnusedDependencies(techStack, fileContents) {
+  async findUnusedDependenciesChunked(techStack, fileContents) {
     const unused = [];
     const deps = techStack.dependencies || [];
+    const total = deps.length;
+    const MAX_LEN = 200000;
 
-    const allCode = Object.values(fileContents).filter(Boolean).join('\n');
-
-    for (const dep of deps) {
+    for (let i = 0; i < deps.length; i++) {
+      await this.yieldControl();
+      const dep = deps[i];
       const name = dep.name;
       if (!name) continue;
 
-      const implicit = ['php', 'node', 'typescript', 'nodemon', '@types/',
-        'eslint', 'prettier', 'jest', 'mocha', 'webpack', 'vite', 'babel',
-        'autoprefixer', 'postcss', 'sass', 'less', 'dotenv'];
+      const implicit = ['php', 'node', 'typescript', '@types/', 'eslint', 'prettier', 'jest', 'webpack', 'vite', 'babel', 'dotenv'];
       if (implicit.some(p => name.includes(p))) continue;
 
       const namePattern = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const isUsed = new RegExp(`['"]${namePattern}['"/]`).test(allCode) ||
-                     new RegExp(`require\\s*\\(\\s*['"]${namePattern}`).test(allCode) ||
-                     new RegExp(`from\\s+['"]${namePattern}`).test(allCode) ||
-                     new RegExp(`use\\s+${namePattern.replace(/\//g, '\\\\\\\\')}`, 'i').test(allCode);
+      let isUsed = false;
+
+      for (const [filePath, content] of Object.entries(fileContents)) {
+        if (!content) continue;
+        const text = content.length > MAX_LEN ? content.slice(0, MAX_LEN) : content;
+        if (new RegExp(`['"]${namePattern}['"/]`).test(text) ||
+            new RegExp(`require\\s*\\(\\s*['"]${namePattern}`).test(text) ||
+            new RegExp(`from\\s+['"]${namePattern}`).test(text) ||
+            new RegExp(`use\\s+${namePattern.replace(/\//g, '\\\\\\\\')}`, 'i').test(text)) {
+          isUsed = true;
+          break;
+        }
+      }
 
       if (!isUsed) {
         unused.push({
           name,
           version: dep.version,
           source: dep.source,
-          description: `Dependency "${name}" is listed in ${dep.source} but not imported in code`
+          description: `Dependency "${name}" is listed but not imported`
         });
+      }
+
+      if (i % 10 === 0 && this.context?.onProgress) {
+        this.context.onProgress({ layer: 'Checking dependencies', current: i + 1, total });
       }
     }
 
@@ -392,98 +399,25 @@ class CodeQualityLayer extends BaseLayer {
   }
 
   // ═══════════════════════════════════════════════════════
-  // Find Large Functions (language-aware thresholds)
+  // Find Commented-Out Code Blocks (chunked)
   // ═══════════════════════════════════════════════════════
 
-  findLargeFunctions(fileContents, filesAnalysis) {
-    const large = [];
-
-    for (const file of filesAnalysis) {
-      const content = fileContents[file.path];
-      if (!content) continue;
-      const lines = content.split('\n');
-
-      const lang = file.language || 'default';
-      const threshold = CodeQualityLayer.THRESHOLDS[lang] || CodeQualityLayer.THRESHOLDS.default;
-
-      // Check standalone functions
-      for (const func of (file.functions || [])) {
-        const funcLines = this.countFunctionLines(lines, func.line - 1);
-        if (funcLines > threshold) {
-          large.push({
-            name: func.name,
-            file: file.path,
-            line: func.line,
-            lines: funcLines,
-            threshold,
-            language: lang,
-            description: `Function "${func.name}" is ${funcLines} lines (threshold for ${lang}: ${threshold})`
-          });
-        }
-      }
-
-      // Check methods
-      for (const cls of (file.classes || [])) {
-        for (const method of (cls.methods || [])) {
-          const methodLines = this.countFunctionLines(lines, method.line - 1);
-          if (methodLines > threshold) {
-            large.push({
-              name: `${cls.name}.${method.name}`,
-              file: file.path,
-              line: method.line,
-              lines: methodLines,
-              threshold,
-              language: lang,
-              description: `Method "${cls.name}.${method.name}" is ${methodLines} lines (threshold for ${lang}: ${threshold})`
-            });
-          }
-        }
-      }
-    }
-
-    return large;
-  }
-
-  countFunctionLines(lines, startLine) {
-    let depth = 0;
-    let started = false;
-    let count = 0;
-
-    for (let i = startLine; i < lines.length; i++) {
-      const line = lines[i];
-      for (const ch of line) {
-        if (ch === '{') { depth++; started = true; }
-        if (ch === '}') depth--;
-      }
-      if (started) count++;
-      if (started && depth === 0) break;
-    }
-
-    return count;
-  }
-
-  // ═══════════════════════════════════════════════════════
-  // Find Commented-Out Code Blocks
-  // ═══════════════════════════════════════════════════════
-
-  /**
-   * Detect large blocks of commented-out code in PHP/JS/TS files.
-   * Flags blocks of 8+ consecutive commented lines as "dead code".
-   * Ignores normal doc-blocks (/** ... * /).
-   */
-  findCommentedCode(fileContents) {
+  async findCommentedCodeChunked(fileContents) {
     const results = [];
-    const MIN_BLOCK = 8; // minimum consecutive lines to flag
+    const entries = Object.entries(fileContents);
+    const total = entries.length;
+    const MIN_BLOCK = 8;
+    const MAX_LEN = 300000;
 
-    for (const [filePath, content] of Object.entries(fileContents)) {
-      if (!content) continue;
-      if (!/\.(php|js|jsx|ts|tsx|vue)$/.test(filePath)) continue;
+    for (let i = 0; i < entries.length; i++) {
+      await this.yieldControl();
+      const [filePath, content] = entries[i];
+      if (!content || !/\.(php|js|jsx|ts|tsx|vue)$/.test(filePath)) continue;
+      if (this.obfuscatedPaths?.has(filePath)) continue;
 
-      const lines = content.split('\n');
-      let blockStart = -1;
-      let blockLines = 0;
-      let inBlockComment = false;
-      let isDocBlock = false;
+      const text = content.length > MAX_LEN ? content.slice(0, MAX_LEN) : content;
+      const lines = text.split('\n');
+      let blockStart = -1, blockLines = 0, inBlockComment = false, isDocBlock = false;
 
       const flushBlock = (endLine) => {
         if (blockLines >= MIN_BLOCK && !isDocBlock) {
@@ -492,7 +426,7 @@ class CodeQualityLayer extends BaseLayer {
             file: filePath,
             line: blockStart + 1,
             lines: blockLines,
-            description: `${blockLines} consecutive commented lines (line ${blockStart + 1}–${endLine}). Consider removing dead code to reduce file size.`
+            description: `${blockLines} consecutive commented lines`
           });
         }
         blockStart = -1;
@@ -500,60 +434,35 @@ class CodeQualityLayer extends BaseLayer {
         isDocBlock = false;
       };
 
-      for (let i = 0; i < lines.length; i++) {
-        const trimmed = lines[i].trim();
-
-        // Track block comments /* ... */
+      for (let j = 0; j < lines.length; j++) {
+        const trimmed = lines[j].trim();
         if (!inBlockComment) {
-          // Start of block comment
           if (trimmed.startsWith('/*')) {
-            // Detect doc-block: /** or /*! (intentional documentation)
             isDocBlock = trimmed.startsWith('/**') || trimmed.startsWith('/*!');
             inBlockComment = true;
-            if (blockStart === -1) blockStart = i;
+            if (blockStart === -1) blockStart = j;
             blockLines++;
-            // Single-line block comment
-            if (trimmed.includes('*/') && trimmed.indexOf('*/') > trimmed.indexOf('/*') + 1) {
-              inBlockComment = false;
-              // Don't flush single-line comments
-              if (blockLines < MIN_BLOCK && !this._isNextLineComment(lines, i + 1)) {
-                flushBlock(i + 1);
-              }
-            }
+            if (trimmed.includes('*/')) inBlockComment = false;
             continue;
           }
-
-          // Single-line comment: // or #
           if (trimmed.startsWith('//') || (trimmed.startsWith('#') && !trimmed.startsWith('#!'))) {
-            // Skip short comments (likely intentional doc/notes)
-            const commentText = trimmed.replace(/^\/\/\s*|^#\s*/, '');
-
-            // Heuristic: real commented-out code usually has code-like patterns
-            if (blockStart === -1) blockStart = i;
+            if (blockStart === -1) blockStart = j;
             blockLines++;
             continue;
           }
-
-          // Not a comment line — flush any accumulated block
-          if (blockLines > 0) {
-            flushBlock(i);
-          }
+          if (blockLines > 0) flushBlock(j);
         } else {
-          // Inside a block comment
           blockLines++;
           if (trimmed.includes('*/')) {
             inBlockComment = false;
-            // Check if next line continues with comments
-            if (!this._isNextLineComment(lines, i + 1)) {
-              flushBlock(i + 1);
-            }
+            if (!this._isNextLineComment(lines, j + 1)) flushBlock(j + 1);
           }
         }
       }
+      if (blockLines > 0) flushBlock(lines.length);
 
-      // Flush remaining block at end of file
-      if (blockLines > 0) {
-        flushBlock(lines.length);
+      if (i % 25 === 0 && this.context?.onProgress) {
+        this.context.onProgress({ layer: 'Scanning commented code', current: i + 1, total });
       }
     }
 
@@ -563,35 +472,38 @@ class CodeQualityLayer extends BaseLayer {
   _isNextLineComment(lines, idx) {
     if (idx >= lines.length) return false;
     const trimmed = lines[idx].trim();
-    return trimmed.startsWith('//') || trimmed.startsWith('#') ||
-           trimmed.startsWith('/*') || trimmed.startsWith('*');
+    return trimmed.startsWith('//') || trimmed.startsWith('#') || trimmed.startsWith('/*') || trimmed.startsWith('*');
   }
 
   // ═══════════════════════════════════════════════════════
-  // Complexity Analysis
+  // Complexity Analysis (chunked)
   // ═══════════════════════════════════════════════════════
 
-  analyzeComplexity(fileContents) {
+  async analyzeComplexityChunked(fileContents) {
     const fileComplexity = [];
+    const entries = Object.entries(fileContents);
+    const total = entries.length;
+    const MAX_LEN = 300000;
 
-    for (const [filePath, content] of Object.entries(fileContents)) {
-      if (!content) continue;
-      if (!/\.(php|js|jsx|ts|tsx)$/.test(filePath)) continue;
+    for (let i = 0; i < entries.length; i++) {
+      await this.yieldControl();
+      const [filePath, content] = entries[i];
+      if (!content || !/\.(php|js|jsx|ts|tsx)$/.test(filePath)) continue;
+      if (this.obfuscatedPaths?.has(filePath)) continue;
 
-      const ifCount = (content.match(/\bif\s*\(/g) || []).length;
-      const elseCount = (content.match(/\belse\b/g) || []).length;
-      const forCount = (content.match(/\bfor\s*\(/g) || []).length;
-      const whileCount = (content.match(/\bwhile\s*\(/g) || []).length;
-      const switchCount = (content.match(/\bswitch\s*\(/g) || []).length;
-      const caseCount = (content.match(/\bcase\s+/g) || []).length;
-      const catchCount = (content.match(/\bcatch\s*\(/g) || []).length;
-      const ternaryCount = (content.match(/\?[^?.:]/g) || []).length;
-      const andOrCount = (content.match(/&&|\|\|/g) || []).length;
+      const text = content.length > MAX_LEN ? content.slice(0, MAX_LEN) : content;
+      const ifCount = (text.match(/\bif\s*\(/g) || []).length;
+      const elseCount = (text.match(/\belse\b/g) || []).length;
+      const forCount = (text.match(/\bfor\s*\(/g) || []).length;
+      const whileCount = (text.match(/\bwhile\s*\(/g) || []).length;
+      const switchCount = (text.match(/\bswitch\s*\(/g) || []).length;
+      const caseCount = (text.match(/\bcase\s+/g) || []).length;
+      const catchCount = (text.match(/\bcatch\s*\(/g) || []).length;
+      const ternaryCount = (text.match(/\?[^?.:]/g) || []).length;
+      const andOrCount = (text.match(/&&|\|\|/g) || []).length;
 
-      const complexity = 1 + ifCount + elseCount + forCount + whileCount +
-                         switchCount + caseCount + catchCount + ternaryCount + andOrCount;
-
-      const lines = content.split('\n').length;
+      const complexity = 1 + ifCount + elseCount + forCount + whileCount + switchCount + caseCount + catchCount + ternaryCount + andOrCount;
+      const lines = text.split('\n').length;
 
       if (complexity > 10) {
         fileComplexity.push({
@@ -601,6 +513,10 @@ class CodeQualityLayer extends BaseLayer {
           complexityPerLine: +(complexity / lines).toFixed(3),
           breakdown: { if: ifCount, else: elseCount, for: forCount, while: whileCount, switch: switchCount, case: caseCount, catch: catchCount, ternary: ternaryCount, logicalOps: andOrCount }
         });
+      }
+
+      if (i % 25 === 0 && this.context?.onProgress) {
+        this.context.onProgress({ layer: 'Calculating complexity', current: i + 1, total });
       }
     }
 

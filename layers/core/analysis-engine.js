@@ -36,49 +36,65 @@ class AnalysisEngine {
       meta: {
         projectId: projectConfig.id,
         projectName: projectConfig.name,
+        rootPath: projectConfig.root_path,
+        excludedFolders: projectConfig.excluded_folders,
         analyzedAt: new Date().toISOString(),
-        version: '1.0.0',
+        version: '1.1.0',
         layersExecuted: []
       }
     };
 
+    // Передаём onProgress в context, чтобы слои могли его использовать
     const context = {
       project: projectConfig,
-      startTime
+      startTime,
+      onProgress: onProgress ? (info) => {
+        onProgress({
+          ...info,
+          step: info.step || info.status || 1,
+          total: info.total || this.layers.length,
+          current: info.current || 1
+        });
+      } : undefined
     };
 
     for (let i = 0; i < this.layers.length; i++) {
       const layer = this.layers[i];
       const layerStart = Date.now();
 
-      // Progress callback
       if (onProgress) {
         onProgress({
           layer: layer.name,
-          step: i + 1,
+          step: 'started',
+          current: i + 1,
           total: this.layers.length,
           status: 'running'
         });
       }
 
       try {
-        // 1. Create immutable snapshot
         const snapshot = deepFreeze(deepClone(state));
-
-        // 2. Layer processes and returns delta
         const delta = await layer.process(snapshot, context);
 
-        // 3. Merge delta into state atomically
         if (delta && typeof delta === 'object') {
           state = deepMerge(state, delta);
         }
 
-        // Track layer execution
         state.meta.layersExecuted.push({
           name: layer.name,
           durationMs: Date.now() - layerStart,
           status: 'completed'
         });
+
+        if (onProgress) {
+          onProgress({
+            layer: layer.name,
+            step: 'completed',
+            current: i + 1,
+            total: this.layers.length,
+            status: 'completed'
+          });
+        }
 
       } catch (err) {
         console.error(`[AnalysisEngine] Layer "${layer.name}" failed:`, err.message);
@@ -90,14 +106,20 @@ class AnalysisEngine {
           error: err.message
         });
 
-        // Continue with next layer — don't abort the whole analysis
+        if (onProgress) {
+          onProgress({
+            layer: layer.name,
+            step: 'failed',
+            current: i + 1,
+            total: this.layers.length,
+            status: 'failed',
+            error: err.message
+          });
+        }
       }
     }
 
-    // Finalize report
     state.meta.durationMs = Date.now() - startTime;
-
-    // Strip internal data (prefixed with _) before returning
     return stripInternal(state);
   }
 }

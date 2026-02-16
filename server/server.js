@@ -16,12 +16,18 @@ app.use(express.static(path.join(__dirname, '..', 'frontend')));
 
 // ─── API Routes
 app.use('/api/projects', require('./routes/projects'));
-app.use('/api/analysis', require('./routes/analysis'));
 app.use('/api/reports', require('./routes/reports'));
+
+// Lazy-load analysis route (loads 4 layers + engine — defers ~5–10s startup delay)
+let analysisRouter = null;
+app.use('/api/analysis', (req, res, next) => {
+  if (!analysisRouter) analysisRouter = require('./routes/analysis');
+  analysisRouter(req, res, next);
+});
 
 // ─── Health check
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', version: '1.0.0', port: app.get('port'), timestamp: new Date().toISOString() });
+  res.json({ status: 'ok', version: '1.1.0', port: app.get('port'), timestamp: new Date().toISOString() });
 });
 
 // ─── SPA fallback
@@ -50,7 +56,7 @@ function tryListen(port, attemptsLeft) {
 
     console.log('');
     console.log('  ╔══════════════════════════════════════════╗');
-    console.log('  ║        CodeInspector v1.0.0              ║');
+    console.log('  ║        CodeInspector v1.1.0              ║');
     console.log(`  ║   http://localhost:${port}                  ║`);
     if (note) {
       console.log(`  ║${note.padEnd(42)}║`);

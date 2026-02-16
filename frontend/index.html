@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CodeInspector</title>
   <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/plugins/line-numbers/prism-line-numbers.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/plugins/line-highlight/prism-line-highlight.min.css">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔍</text></svg>">
 </head>
 <body>
@@ -16,28 +19,28 @@
           <span class="logo-icon">&#x1f50d;</span>
           <span class="logo-text">Code<strong>Inspector</strong></span>
         </div>
-        <span class="version">v1.0.0</span>
+        <span class="version">v1.1.0</span>
       </div>
 
       <nav class="sidebar-nav">
         <a href="#" class="nav-item active" data-page="projects">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
-          Projects
+          <span data-i18n="projects">Projects</span>
         </a>
         <a href="#" class="nav-item" data-page="reports">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-          Reports
+          <span data-i18n="reports">Reports</span>
         </a>
         <a href="#" class="nav-item" data-page="settings">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
-          Settings
+          <span data-i18n="settings">Settings</span>
         </a>
       </nav>
 
       <div class="sidebar-footer">
         <div class="status-indicator">
           <span class="status-dot"></span>
-          Server online
+          <span data-i18n="server_online">Server online</span>
         </div>
       </div>
     </aside>
@@ -49,12 +52,12 @@
       <div id="page-projects" class="page active">
         <div class="page-header">
           <div>
-            <h1>Projects</h1>
-            <p class="page-subtitle">Manage your code projects for analysis</p>
+            <h1 data-i18n="projects">Projects</h1>
+            <p class="page-subtitle" data-i18n="manage_projects">Manage your code projects for analysis</p>
           </div>
           <button class="btn btn-primary" onclick="App.showAddProject()">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            Add Project
+            <span data-i18n="add_project">Add Project</span>
           </button>
         </div>
 
@@ -66,9 +69,9 @@
           <div class="empty-icon">
             <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
           </div>
-          <h3>No projects yet</h3>
-          <p>Add your first project to start analyzing code</p>
-          <button class="btn btn-primary" onclick="App.showAddProject()">Add Project</button>
+          <h3 data-i18n="no_projects">No projects yet</h3>
+          <p data-i18n="add_first_project">Add your first project to start analyzing code</p>
+          <button class="btn btn-primary" onclick="App.showAddProject()"><span data-i18n="add_project">Add Project</span></button>
         </div>
       </div>
 
@@ -76,14 +79,14 @@
       <div id="page-reports" class="page">
         <div class="page-header">
           <div>
-            <h1>Reports</h1>
-            <p class="page-subtitle">View generated analysis reports</p>
+            <h1 data-i18n="reports">Reports</h1>
+            <p class="page-subtitle" data-i18n="view_reports">View generated analysis reports</p>
           </div>
         </div>
         <div id="reports-list" class="reports-list">
           <div class="empty-state">
-            <h3>No reports yet</h3>
-            <p>Run an analysis on a project to generate reports</p>
+            <h3 data-i18n="no_reports">No reports yet</h3>
+            <p data-i18n="run_analysis">Run an analysis on a project to generate reports</p>
           </div>
         </div>
       </div>
@@ -92,37 +95,45 @@
       <div id="page-settings" class="page">
         <div class="page-header">
           <div>
-            <h1>Settings</h1>
-            <p class="page-subtitle">Configure global application settings</p>
+            <h1 data-i18n="settings">Settings</h1>
+            <p class="page-subtitle" data-i18n="configure_settings">Configure global application settings</p>
           </div>
         </div>
         <div class="settings-content">
           <div class="setting-group">
-            <h3>Appearance</h3>
+            <h3 data-i18n="appearance">Appearance</h3>
             <div class="setting-item">
-              <label>Theme</label>
+              <label data-i18n="theme">Theme</label>
               <div class="theme-switcher">
                 <button class="theme-btn active" data-theme="dark" onclick="App.setTheme('dark')">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-                  Dark
+                  <span data-i18n="dark">Dark</span>
                 </button>
-                <button class="theme-btn" data-theme="light" onclick="App.setTheme('light')">
+                <button class="theme-btn" onclick="App.setTheme('light')">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-                  Light
+                  <span data-i18n="light">Light</span>
                 </button>
               </div>
-              <span class="setting-hint">Switch between dark and light color scheme</span>
+              <span class="setting-hint" data-i18n="theme_hint">Switch between dark and light color scheme</span>
             </div>
           </div>
           <div class="setting-group">
-            <h3>General</h3>
+            <h3 data-i18n="general">General</h3>
             <div class="setting-item">
-              <label>Default excluded folders</label>
+              <label data-i18n="language">Language</label>
+              <div class="theme-switcher">
+                <button type="button" class="lang-btn active" data-lang="en" onclick="App.setLanguage('en')"><span data-i18n="english">English</span></button>
+                <button type="button" class="lang-btn" data-lang="ru" onclick="App.setLanguage('ru')"><span data-i18n="russian">Русский</span></button>
+              </div>
+              <span class="setting-hint" data-i18n="language_hint">Interface language</span>
+            </div>
+            <div class="setting-item">
+              <label data-i18n="excluded_folders">Default excluded folders</label>
               <input type="text" id="setting-excluded" value="node_modules, vendor, .git, dist, build, cache" class="input">
-              <span class="setting-hint">Comma-separated list of folders to exclude by default</span>
+              <span class="setting-hint" data-i18n="excluded_hint">Comma-separated list of folders to exclude by default</span>
             </div>
           </div>
-          <div class="setting-group">
+          <div class="setting-group" style="display: none;">
             <h3>LLM Integration</h3>
             <div class="setting-item">
               <label>Ollama API URL</label>
@@ -171,25 +182,28 @@
           <div>
             <button class="btn btn-ghost" onclick="App.backFromReport()">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
-              Back
+              <span data-i18n="back">Back</span>
             </button>
             <h1 id="report-title">Analysis Report</h1>
             <p class="page-subtitle" id="report-subtitle"></p>
           </div>
           <div class="header-actions">
-            <button class="btn btn-outline" onclick="App.downloadReport()">
+            <button class="btn btn-outline" onclick="App.showExportModal()">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-              Download JSON
+              <span data-i18n="export">Export</span>
+            </button>
+            <button class="btn btn-ghost" onclick="App.deleteReport()" data-i18n-title="delete_report_title" style="color:var(--danger)">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+              Delete
             </button>
           </div>
         </div>
 
         <!-- Report Tabs -->
         <div class="report-tabs">
-          <button class="report-tab active" onclick="App.showReportTab('overview')">Overview</button>
-          <button class="report-tab" onclick="App.showReportTab('tree')">File Tree</button>
-          <button class="report-tab" onclick="App.showReportTab('structure')">Code Structure</button>
-          <button class="report-tab" onclick="App.showReportTab('quality')">Code Quality</button>
+          <button class="report-tab active" onclick="App.showReportTab('overview')" data-i18n="overview">Overview</button>
+          <button class="report-tab" onclick="App.showReportTab('structure')" data-i18n="project_structure">Project Structure</button>
+          <button class="report-tab" onclick="App.showReportTab('quality')" data-i18n="code_quality">Code Quality</button>
         </div>
 
         <div id="report-content">
@@ -200,7 +214,7 @@
     </main>
 
     <!-- ═══ Modal: Add/Edit Project ═══ -->
-    <div id="modal-overlay" class="modal-overlay" style="display:none" onclick="App.closeModal(event)">
+    <div id="modal-overlay" class="modal-overlay" style="display:none">
       <div class="modal" onclick="event.stopPropagation()">
         <div class="modal-header">
           <h2 id="modal-title">Add Project</h2>
@@ -210,43 +224,50 @@
           <div class="modal-body">
             <!-- Basic Info -->
             <div class="form-section">
-              <h3>Basic Information</h3>
+              <h3 data-i18n="basic_info">Basic Information</h3>
               <div class="form-row">
                 <div class="form-group">
-                  <label for="pf-name">Project Name <span class="required">*</span></label>
-                  <input type="text" id="pf-name" class="input" placeholder="My Awesome Project" required>
+                  <label for="pf-name" data-i18n="project_name">Project Name</label>
+                  <input type="text" id="pf-name" class="input" data-i18n-placeholder="pf_name_placeholder" placeholder="">
+                  <span class="form-hint" data-i18n="pf_name_hint">If empty, folder name is used</span>
                 </div>
               </div>
               <div class="form-row">
                 <div class="form-group">
-                  <label for="pf-path">Root Path <span class="required">*</span></label>
-                  <input type="text" id="pf-path" class="input" placeholder="C:\projects\my-app  or  /home/user/projects/my-app" required>
-                  <span class="form-hint">Absolute path to the project root directory</span>
+                  <label for="pf-path" data-i18n="root_path">Root Path <span class="required">*</span></label>
+                  <div class="input-with-btn">
+                    <input type="text" id="pf-path" class="input" placeholder="C:\projects\my-app" required>
+                    <button type="button" class="btn btn-outline btn-sm" onclick="App.showBrowseFolder()" data-i18n-title="browse_folder_title" data-i18n="browse">Browse...</button>
+                  </div>
+                  <span class="form-hint" data-i18n="pf_path_hint">Project root folder</span>
                 </div>
               </div>
               <div class="form-row">
                 <div class="form-group">
-                  <label for="pf-entry">Entry Point</label>
+                  <label for="pf-entry" data-i18n="entry_point">Entry Point</label>
                   <input type="text" id="pf-entry" class="input" placeholder="src/index.js  or  public/index.php">
-                  <span class="form-hint">Relative path to the main file that starts the application</span>
+                  <span class="form-hint" data-i18n="entry_point_hint">Relative path to the main file that starts the application</span>
                 </div>
               </div>
             </div>
 
             <!-- Technology Stack -->
             <div class="form-section">
-              <h3>Technology Stack</h3>
+              <h3 data-i18n="tech_stack">Technology Stack</h3>
               <div class="form-row">
                 <div class="form-group">
-                  <label>Languages &amp; Platforms</label>
-                  <div class="checkbox-group" id="pf-technologies">
-                    <label class="checkbox-label"><input type="checkbox" value="php"> PHP</label>
-                    <label class="checkbox-label"><input type="checkbox" value="javascript"> JavaScript</label>
-                    <label class="checkbox-label"><input type="checkbox" value="typescript"> TypeScript</label>
-                    <label class="checkbox-label"><input type="checkbox" value="nodejs"> Node.js</label>
-                    <label class="checkbox-label"><input type="checkbox" value="html"> HTML</label>
-                    <label class="checkbox-label"><input type="checkbox" value="css"> CSS</label>
-                  </div>
+                  <label for="pf-project-type" data-i18n="project_type_label">Project type <span class="required">*</span></label>
+                  <select id="pf-project-type" class="input" required>
+                    <option value="auto" data-i18n="project_type_auto">Auto (detect by structure)</option>
+                    <option value="php">PHP (Laravel, Symfony, WordPress, custom)</option>
+                    <option value="telegram-php">Telegram bot PHP / PHP API</option>
+                    <option value="nodejs">Node.js (Express, API)</option>
+                    <option value="spa">SPA (React, Vue, Angular)</option>
+                    <option value="pwa">PWA</option>
+                    <option value="telegram">Telegram Mini App</option>
+                    <option value="static">Static (HTML/CSS/JS)</option>
+                  </select>
+                  <span class="form-hint" data-i18n="project_type_hint">Used to find entry point, DB config, webhook</span>
                 </div>
               </div>
               <div class="form-row">
@@ -302,15 +323,15 @@
 
             <!-- Analysis Settings -->
             <div class="form-section">
-              <h3>Analysis Settings</h3>
+              <h3 data-i18n="analysis_settings">Analysis Settings</h3>
               <div class="form-row">
                 <div class="form-group">
-                  <label for="pf-excluded">Excluded Folders</label>
-                  <input type="text" id="pf-excluded" class="input" value="node_modules, vendor, .git, dist, build, cache, .next, .nuxt">
-                  <span class="form-hint">Comma-separated folders to skip during analysis</span>
+                  <label for="pf-excluded" data-i18n="excluded_folders_form">Excluded Folders</label>
+                  <input type="text" id="pf-excluded" class="input" value="node_modules, vendor, .git, dist, build, cache, .next, .nuxt, reports, data">
+                  <span class="form-hint" data-i18n="excluded_hint_form">Comma-separated folders to skip during analysis</span>
                 </div>
               </div>
-              <div class="form-row">
+              <div class="form-row" style="display:none"><!-- LLM Analysis — скрыто, чтобы не путать -->
                 <div class="form-group toggle-group">
                   <label class="toggle-label">
                     <input type="checkbox" id="pf-llm" class="toggle-input">
@@ -322,15 +343,15 @@
               </div>
               <div class="form-row">
                 <div class="form-group">
-                  <label for="pf-notes">Notes</label>
-                  <textarea id="pf-notes" class="input textarea" rows="3" placeholder="Any additional notes about this project..."></textarea>
+                  <label for="pf-notes" data-i18n="notes">Notes</label>
+                  <textarea id="pf-notes" class="input textarea" rows="3" data-i18n-placeholder="notes_placeholder" placeholder=""></textarea>
                 </div>
               </div>
             </div>
           </div>
 
           <div class="modal-footer">
-            <button type="button" class="btn btn-ghost" onclick="App.closeModal()">Cancel</button>
+            <button type="button" class="btn btn-ghost" onclick="App.closeModal()" data-i18n="cancel">Cancel</button>
             <button type="submit" class="btn btn-primary" id="modal-submit-btn">Add Project</button>
           </div>
 
@@ -339,24 +360,42 @@
       </div>
     </div>
 
+    <!-- ═══ Browse Folder Modal ═══ -->
+    <div id="browse-overlay" class="modal-overlay" style="display:none">
+      <div class="modal modal-md" onclick="event.stopPropagation()">
+        <div class="modal-header">
+          <h2 data-i18n="browse_modal_title">Select project folder</h2>
+          <button class="btn-close" onclick="App.closeBrowseFolder()">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div id="browse-current-path" class="browse-path" style="font-size:0.85rem;color:var(--text-muted);margin-bottom:12px;word-break:break-all"></div>
+          <div id="browse-list" class="browse-list"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-ghost" onclick="App.closeBrowseFolder()" data-i18n="cancel">Cancel</button>
+          <button type="button" class="btn btn-primary" onclick="App.selectBrowseFolder()" data-i18n="select_this_folder">Select this folder</button>
+        </div>
+      </div>
+    </div>
+
     <!-- ═══ Confirm Dialog ═══ -->
     <div id="confirm-overlay" class="modal-overlay" style="display:none">
       <div class="modal modal-sm">
         <div class="modal-header">
-          <h2 id="confirm-title">Confirm</h2>
+          <h2 id="confirm-title" data-i18n="confirm">Confirm</h2>
         </div>
         <div class="modal-body">
-          <p id="confirm-message">Are you sure?</p>
+          <p id="confirm-message" data-i18n="are_you_sure">Are you sure?</p>
         </div>
         <div class="modal-footer">
-          <button class="btn btn-ghost" onclick="App.closeConfirm(false)">Cancel</button>
-          <button class="btn btn-danger" id="confirm-btn" onclick="App.closeConfirm(true)">Delete</button>
+          <button class="btn btn-ghost" onclick="App.closeConfirm(false)" data-i18n="cancel">Cancel</button>
+          <button class="btn btn-danger" id="confirm-btn" onclick="App.closeConfirm(true)" data-i18n="delete">Delete</button>
         </div>
       </div>
     </div>
 
     <!-- ═══ Code Preview Modal ═══ -->
-    <div id="code-preview-overlay" class="modal-overlay" style="display:none" onclick="App.closeCodePreview(event)">
+    <div id="code-preview-overlay" class="modal-overlay" style="display:none">
       <div class="modal modal-code" onclick="event.stopPropagation()">
         <div class="modal-header">
           <div style="min-width:0;flex:1">
@@ -368,17 +407,80 @@
         <div class="modal-body code-preview-body" id="code-preview-body">
           <div class="analysis-running" id="code-preview-loading">
             <div class="spinner"></div>
-            <p>Loading file...</p>
+            <p data-i18n="loading_file">Loading file...</p>
           </div>
           <pre class="code-preview-pre" id="code-preview-content"></pre>
         </div>
       </div>
     </div>
 
+    <!-- ═══ Export Report Modal ═══ -->
+    <div id="export-modal-overlay" class="modal-overlay" style="display:none">
+      <div class="modal modal-md" onclick="event.stopPropagation()">
+        <div class="modal-header">
+          <h2 data-i18n="export_report">Export Report</h2>
+          <button class="btn-close" onclick="App.closeExportModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group" style="margin-bottom:16px">
+            <label data-i18n="format">Format</label>
+            <select id="exp-format" class="input" onchange="App.updateExportSizeHint()">
+              <option value="json">JSON</option>
+              <option value="md">Markdown</option>
+            </select>
+            <span class="form-hint" data-i18n="export_format_hint">Markdown is better for AI agents</span>
+          </div>
+          <p style="color:var(--text-muted);margin-bottom:12px" data-i18n="export_sections_hint">Select sections to export.</p>
+          <div class="export-options" id="export-options">
+            <label class="export-check"><input type="checkbox" id="exp-overview" checked> <span data-i18n="exp_overview_label">Overview — card, languages, frameworks, dependencies</span></label>
+            <label class="export-check"><input type="checkbox" id="exp-structure" checked> <span data-i18n="exp_structure_label">Project Structure — file tree (code only), code structure</span></label>
+            <label class="export-check"><input type="checkbox" id="exp-quality" checked> <span data-i18n="exp_quality_label">Code Quality — issues, complexity</span></label>
+          </div>
+          <div id="export-size-hint" style="margin-top:12px;font-size:0.85rem;color:var(--text-muted)">~ size...</div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-ghost" onclick="App.closeExportModal()" data-i18n="cancel">Cancel</button>
+          <button type="button" class="btn btn-primary" onclick="App.downloadReport()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            <span data-i18n="download">Download</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- ═══ Toast Notifications ═══ -->
     <div id="toast-container" class="toast-container"></div>
+
+    <!-- ═══ Progress Modal ═══ -->
+    <div id="progress-overlay" class="modal-overlay" style="display:none">
+      <div class="modal modal-sm" onclick="event.stopPropagation()">
+        <div class="modal-header">
+          <h2>Code Analysis</h2>
+          <button class="btn-close" onclick="App.hideProgressModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p id="progress-step">Starting analysis...</p>
+          <div class="progress-bar">
+            <div id="progress-fill" class="fill"></div>
+          </div>
+          <p id="progress-count" style="text-align:center;margin-top:8px;color:var(--text-muted)">0 / 0 steps</p>
+        </div>
+      </div>
+    </div>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/plugins/line-numbers/prism-line-numbers.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/plugins/line-highlight/prism-line-highlight.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-markup-templating.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-php.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-javascript.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-typescript.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-jsx.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-tsx.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-markup.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-css.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-json.min.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
